@@ -48,6 +48,7 @@ namespace usbpp
         int ep() const { return m_ep; };
         int transfer_type() const { return m_bmAttributes & LIBUSB_TRANSFER_TYPE_MASK; };
         bool is_in() const { return m_ep & LIBUSB_ENDPOINT_IN; }
+        bool is_out() const { return !is_in(); };
 
     private:
         uint8_t         m_ep = 0;
@@ -56,20 +57,30 @@ namespace usbpp
         uint8_t         m_bInterval = 0;
     };
 
+    ///////////////////////////////////////////////////////////////////
+    //// usbpp::handle
+    //// this class encapsulates a libusb_device_handle
+    ///////////////////////////////////////////////////////////////////
     class handle
     {
     public:
-        using transfer_cb_fn = std::function<void(const uint8_t*, size_t)>;
+        using transfer_cb_fn = std::function<void(libusb_transfer_status,
+            const uint8_t*, size_t)>;
 
         handle(	libusb_device_handle *h ) : m_handle(h, ::libusb_close) {}
 
         bool control_transfer(uint8_t bmRequestType,
-                uint8_t bRequest,
-                uint16_t wValue,
-                uint16_t wIndex,
-                uint16_t wLength,
-                uint8_t *buffer,
-                transfer_cb_fn);
+            uint8_t bRequest,
+            uint16_t wValue,
+            uint16_t wIndex,
+            uint16_t wLength,
+            uint8_t *buffer,
+            transfer_cb_fn);
+
+        bool transfer(const usbpp::endpoint &ep,
+            uint8_t *buffer,
+            size_t length,
+            transfer_cb_fn);
 
         std::vector<endpoint> endpoints();
 
@@ -77,13 +88,19 @@ namespace usbpp
         void on_libusb_transfer_cb(struct libusb_transfer*);
 
     private:
-        struct transfer
+        struct xfer
         {
+            struct deleter {
+                void operator()(struct libusb_transfer* t) {
+                     ::libusb_free_transfer( t );
+                };
+            };
             transfer_cb_fn cb;
-            struct libusb_transfer *t;
+            std::unique_ptr<struct libusb_transfer, deleter> xfer;
+            std::unique_ptr<uint8_t[]> buf;
         };
         std::shared_ptr<libusb_device_handle>	m_handle;
-        std::vector<transfer>                   m_transfers;
+        std::vector<xfer>                       m_transfers;
     };
 
     class interface
@@ -123,6 +140,9 @@ namespace usbpp
         std::vector<interface>      m_interfaces;
     };
 
+    ///////////////////////////////////////////////////////////////////
+    //// usbpp::device
+    ///////////////////////////////////////////////////////////////////
     class device
     {
     public:
@@ -145,11 +165,14 @@ namespace usbpp
         }
 
     private:
-        struct libusb_device		*m_dev;
+        struct libusb_device            *m_dev;
         struct libusb_device_descriptor m_desc;
         std::vector<configuration>      m_configurations;
     };
 
+    ///////////////////////////////////////////////////////////////////
+    //// usb::context
+    ///////////////////////////////////////////////////////////////////
     class context : public events::receiver
     {
     public:
@@ -164,7 +187,7 @@ namespace usbpp
         void on_hotplug( libusb_device *device, libusb_hotplug_event event );
 
     public: // inherited from events::receiver
-        virtual void event_callback( int, short );
+        virtual void event_callback( int, short ) override;
 
     private:
         using hotplug_fn_t = std::function<void(device&, int)>; 
@@ -177,4 +200,4 @@ namespace usbpp
 };
 std::ostream& operator<<(std::ostream& os, const usbpp::device& device);
 
-// vim: set shiftwidth=4 expandtab cinoptions=>1s,t0,g0:
+// vim: set shiftwidth=4 expandtab cinoptions=t0,g0,j1,ws,(s,W1:

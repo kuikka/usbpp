@@ -5,15 +5,30 @@
 #include <cstdio>
 #include "libusbpp.h"
 
+static void hexdump(const void *ptr, size_t len)
+{
+    uint8_t *p = (uint8_t*) ptr;
+    for (size_t i = 0; i < len; i++)
+    {
+        printf("%02x ", p[i]);
+        if (i && i % 16 == 0)
+        {
+            printf("\n");
+        }
+    }
+    printf("\n");
+}
+
 namespace events {
 
     void base::on_event( int fd, short events )
     {
-        auto i = m_receivers.find( fd );
-        if ( i != m_receivers.end() )
+        auto it = m_receivers.find( fd );
+        if ( it != m_receivers.end() )
         {
-            receiver *r = std::get<0>( (*i).second );
-            if (r)
+            short flags = std::get<1>( it->second );
+            receiver *r = std::get<0>( it->second );
+            if (r && (events & flags))
                 r->event_callback( fd, events );
         }
     }
@@ -73,6 +88,8 @@ namespace events {
                 {
                     if ( fds[i].revents )
                     {
+                        on_event( fds[i].fd, fds[i].revents );
+#if 0
                         auto it = m_receivers.find( fds[i].fd );
                         if ( it != m_receivers.end() )
                         {
@@ -81,6 +98,7 @@ namespace events {
                             int fd = fds[i].fd;
                             r->event_callback( fd, flags );
                         }
+#endif
                     }
                 }
             }
@@ -150,7 +168,6 @@ namespace usbpp
 
         ::libusb_free_pollfds(fds);
 
-#if 1
         libusb_hotplug_register_callback(m_ctx,
                 static_cast< libusb_hotplug_event >( LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT ),
                 static_cast< libusb_hotplug_flag >( LIBUSB_HOTPLUG_ENUMERATE ),
@@ -160,27 +177,25 @@ namespace usbpp
                 hotplug_callback_fn,
                 this,
                 &m_hotplug_handle);
-#endif
-
 
         return true;
     }
 
     void context::on_fd_added( int fd, short events )
     {
-        printf("on_fd_added %d %x\n", fd, events);
+        printf("usbpp::context::on_fd_added %d %x\n", fd, events);
         m_base->register_event(fd, events, this);
     }
 
     void context::on_fd_removed( int fd )
     {
-        printf("on_fd_removed %d\n", fd);
+        printf("usbpp::context::on_fd_removed %d\n", fd);
         m_base->unregister_event(fd, this);
     }
 
     void context::on_hotplug( libusb_device *device, libusb_hotplug_event event )
     {
-        printf("on_hotplug() event=%x\n", event);
+        printf("usbpp::context::on_hotplug() event=%x\n", event);
         usbpp::device dev(device);
         for ( auto& h : m_hotplug_handler )
             h( dev, event == LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED );
@@ -188,7 +203,7 @@ namespace usbpp
 
     void context::event_callback( int fd, short flags )
     {
-        printf("context::event_callback %d %x\n", fd, flags);
+        printf("usbpp::context::event_callback %d %x\n", fd, flags);
         struct timeval tv = { 0, 0 };
         ::libusb_handle_events_timeout(m_ctx, &tv);
     }
@@ -309,6 +324,51 @@ namespace usbpp
         h->on_libusb_transfer_cb( transfer );
     }
 
+    bool handle::transfer(const usbpp::endpoint &ep,
+        uint8_t *buffer,
+        size_t length,
+        transfer_cb_fn cb)
+    {
+        xfer t;
+
+        t.buf = std::unique_ptr<uint8_t[]>( new uint8_t[length] );
+        if ( ! t.buf )
+            return false;
+
+        if ( ep.is_out() )
+        {
+            ::memcpy(t.buf.get(), buffer, length);
+        }
+
+        t.xfer = std::unique_ptr<struct libusb_transfer, xfer::deleter>(
+             libusb_alloc_transfer( 0 ) );
+        if ( !t.xfer )
+        {
+            return false;
+        }
+
+        ::libusb_fill_interrupt_transfer(
+            t.xfer.get(),
+            m_handle.get(),
+            ep.ep(),
+            t.buf.get(),
+            length,
+            handle_libusb_transfer_cb_fn,
+            this,
+            1000
+        );
+
+        int err = libusb_submit_transfer( t.xfer.get() );
+        if ( err )
+        {
+            return false;
+        }
+
+        t.cb = cb;
+        m_transfers.push_back( std::move( t ) );
+        return true;
+    }
+
     bool handle::control_transfer(uint8_t bmRequestType,
             uint8_t bRequest,
             uint16_t wValue,
@@ -317,55 +377,56 @@ namespace usbpp
             uint8_t *buffer,
             transfer_cb_fn cb)
     {
-        uint8_t *buf = new uint8_t[sizeof(struct libusb_control_setup) + wLength];
-        if ( !buf )
+        xfer t;
+        
+        t.buf = std::unique_ptr<uint8_t[]>( new uint8_t[sizeof(struct libusb_control_setup) + wLength] );
+        if ( ! t.buf )
             return false;
 
-        struct libusb_transfer *xfer = libusb_alloc_transfer( 0 );
-        if ( ! xfer )
+        t.xfer = std::unique_ptr<struct libusb_transfer, xfer::deleter>( libusb_alloc_transfer( 0 ) );
+        if ( !t.xfer )
         {
-            delete[] buf;
             return false;
         }
 
-        libusb_fill_control_setup(buf, bmRequestType, bRequest, wValue, wIndex, wLength);
+        ::libusb_fill_control_setup(t.buf.get(), bmRequestType, bRequest,
+            wValue, wIndex, wLength);
         // Copy data after
         if ( buffer )
         {
-            ::memcpy(buf + sizeof(struct libusb_control_setup),
+            ::memcpy(t.buf.get() + sizeof(struct libusb_control_setup),
                     buffer,
                     wLength);
         }
 
-        libusb_fill_control_transfer(xfer, m_handle.get(), buf,
+        libusb_fill_control_transfer(t.xfer.get(), m_handle.get(), t.buf.get(),
                 handle_libusb_transfer_cb_fn, this , 1000);
 
-        int err = libusb_submit_transfer( xfer );
+        hexdump(t.buf.get(), wLength + sizeof(struct libusb_control_setup));
+
+        int err = libusb_submit_transfer( t.xfer.get() );
         if ( err )
         {
-            libusb_free_transfer( xfer );
-            delete[] buf;
+            return false;
         }
-        transfer t;
-        t.cb = cb;
-        t.t = xfer;
-        m_transfers.push_back( t );
-        return true;
 
+        t.cb = cb;
+        m_transfers.push_back( std::move( t ) );
+        return true;
     }
 
-    void handle::on_libusb_transfer_cb( struct libusb_transfer *xfer )
+    void handle::on_libusb_transfer_cb( struct libusb_transfer *completed )
     {
         for ( auto it = m_transfers.begin();
                 it != m_transfers.end();
                 ++it )
         {
-            if ( (*it).t == xfer )
+            if ( it->xfer.get() == completed )
             {
-                transfer t = *it;
+                xfer t = std::move( *it );
                 m_transfers.erase( it );
-                t.cb( xfer->buffer, xfer->length );
-                libusb_free_transfer( xfer );
+                t.cb( completed->status, completed->buffer, completed->length );
+                return;
             }
         }
     }
@@ -386,4 +447,4 @@ std::ostream& operator<<(std::ostream& os, const usbpp::device& device)
     return os;
 }
 
-// vim: set shiftwidth=4 expandtab cinoptions=>1s,t0,g0:
+// vim: set shiftwidth=4 expandtab cinoptions=t0,g0,j1,ws,(s,W1:
