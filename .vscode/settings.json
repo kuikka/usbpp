@@ -1,0 +1,13 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+    // Compiler options for C (e.g. ['-std=c99'])
+    "clang.cflags": [],
+
+    // Compiler options for C++ (e.g. ['-std=c++11'])
+    "clang.cxxflags": [
+        "-std=c++11",
+        "-I/usr/local/include//libusb-1.0/",
+        "-I${workspaceRoot}"
+    ]
+
+}
