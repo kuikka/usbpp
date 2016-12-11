@@ -5,6 +5,8 @@
 #include <tuple>
 #include <vector>
 #include <list>
+#include <functional>
+#include <memory>
 
 #include <libusb.h>
 
@@ -160,7 +162,8 @@ namespace usbpp
         std::unique_ptr<handle> open()
         {
             libusb_device_handle *h;
-            libusb_open(m_dev, &h);
+            int ret = libusb_open(m_dev, &h);
+            printf("Libusb ret=%d\n", ret);
             return std::unique_ptr<handle>( new  handle( h ) );
         }
 

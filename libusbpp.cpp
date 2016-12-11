@@ -3,6 +3,8 @@
 
 #include <poll.h>
 #include <cstdio>
+#include <cstring>
+
 #include "libusbpp.h"
 
 static void hexdump(const void *ptr, size_t len)
