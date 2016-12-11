@@ -128,7 +128,7 @@ namespace usbpp
     }
 
     static int hotplug_callback_fn(libusb_context* /* ctx */, libusb_device *device,
-            libusb_hotplug_event event, void *user_data)
+        libusb_hotplug_event event, void *user_data)
     {
         printf("hotplug_callback_fn() event=%x\n", event);
         context *c = static_cast<context*>( user_data );
@@ -151,18 +151,18 @@ namespace usbpp
         }
         printf("libusb ctx %p\n", m_ctx);
 
-//        libusb_set_debug( m_ctx, LIBUSB_LOG_LEVEL_DEBUG );
+        //        libusb_set_debug( m_ctx, LIBUSB_LOG_LEVEL_DEBUG );
         m_base = event_base;
 
         ::libusb_set_pollfd_notifiers (m_ctx,
-                added_cb,
-                remove_cb,
-                this);
+            added_cb,
+            remove_cb,
+            this);
 
         const struct libusb_pollfd **fds = ::libusb_get_pollfds(m_ctx);
         for ( int i = 0;
-                fds[i];
-                i++)
+            fds[i];
+            i++)
         {
             printf("fd = %p\n", fds[i]);
             m_base->register_event(fds[i]->fd, fds[i]->events, this);
@@ -171,14 +171,14 @@ namespace usbpp
         ::libusb_free_pollfds(fds);
 
         libusb_hotplug_register_callback(m_ctx,
-                static_cast< libusb_hotplug_event >( LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT ),
-                static_cast< libusb_hotplug_flag >( LIBUSB_HOTPLUG_ENUMERATE ),
-                vendor_id == -1 ? LIBUSB_HOTPLUG_MATCH_ANY : vendor_id,
-                product_id == -1 ? LIBUSB_HOTPLUG_MATCH_ANY : product_id,
-                LIBUSB_HOTPLUG_MATCH_ANY,
-                hotplug_callback_fn,
-                this,
-                &m_hotplug_handle);
+            static_cast< libusb_hotplug_event >( LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT ),
+            static_cast< libusb_hotplug_flag >( LIBUSB_HOTPLUG_ENUMERATE ),
+            vendor_id == -1 ? LIBUSB_HOTPLUG_MATCH_ANY : vendor_id,
+            product_id == -1 ? LIBUSB_HOTPLUG_MATCH_ANY : product_id,
+            LIBUSB_HOTPLUG_MATCH_ANY,
+            hotplug_callback_fn,
+            this,
+            &m_hotplug_handle);
 
         return true;
     }
@@ -238,9 +238,9 @@ namespace usbpp
     /////////////////////////////////////////////////////////////////////
     endpoint::endpoint( const struct libusb_endpoint_descriptor *ep )
         :       m_ep( ep->bEndpointAddress )
-        ,       m_bmAttributes( ep->bmAttributes )
-        ,       m_wMaxPacketSize( ep->wMaxPacketSize )
-        ,       m_bInterval( ep->bInterval )
+                ,       m_bmAttributes( ep->bmAttributes )
+                ,       m_wMaxPacketSize( ep->wMaxPacketSize )
+                ,       m_bInterval( ep->bInterval )
     {
     }
 
@@ -249,10 +249,10 @@ namespace usbpp
     /////////////////////////////////////////////////////////////////////
     interface::interface( const struct libusb_interface_descriptor *intf )
         :       m_bInterfaceNumber( intf->bInterfaceNumber )
-        ,       m_bAlternateSetting( intf->bAlternateSetting )
-        ,       m_bInterfaceClass( intf->bInterfaceClass )
-        ,       m_bInterfaceSubClass( intf->bInterfaceSubClass )
-        ,       m_bInterfaceProtocol( intf->bInterfaceProtocol )
+                ,       m_bAlternateSetting( intf->bAlternateSetting )
+                ,       m_bInterfaceClass( intf->bInterfaceClass )
+                ,       m_bInterfaceSubClass( intf->bInterfaceSubClass )
+                ,       m_bInterfaceProtocol( intf->bInterfaceProtocol )
     {
         for ( int i = 0; i < intf->bNumEndpoints; i++ )
         {
@@ -263,11 +263,11 @@ namespace usbpp
     /////////////////////////////////////////////////////////////////////
     ///////// CONFIGURATION
     /////////////////////////////////////////////////////////////////////
-    
+
     configuration::configuration( struct libusb_config_descriptor *desc )
         :       m_bNumInterfaces( desc->bNumInterfaces )
-        ,       m_bConfigurationValue( desc->bConfigurationValue )
-        ,       m_bmAttributes( desc->bConfigurationValue )
+                ,       m_bConfigurationValue( desc->bConfigurationValue )
+                ,       m_bmAttributes( desc->bConfigurationValue )
     {
         for ( int i = 0; i < desc->bNumInterfaces; i++ )
         {
@@ -292,8 +292,8 @@ namespace usbpp
         {
             struct libusb_config_descriptor *config;
             int err = libusb_get_config_descriptor(m_dev,
-                    i,
-                    &config);
+                i,
+                &config);
             if ( err )
             {
                 std::cout << "libusb_get_config_descriptor ret=" << err << "\n";
@@ -343,7 +343,7 @@ namespace usbpp
         }
 
         t.xfer = std::unique_ptr<struct libusb_transfer, xfer::deleter>(
-             libusb_alloc_transfer( 0 ) );
+            libusb_alloc_transfer( 0 ) );
         if ( !t.xfer )
         {
             return false;
@@ -358,7 +358,7 @@ namespace usbpp
             handle_libusb_transfer_cb_fn,
             this,
             1000
-        );
+            );
 
         int err = libusb_submit_transfer( t.xfer.get() );
         if ( err )
@@ -372,15 +372,15 @@ namespace usbpp
     }
 
     bool handle::control_transfer(uint8_t bmRequestType,
-            uint8_t bRequest,
-            uint16_t wValue,
-            uint16_t wIndex,
-            uint16_t wLength,
-            uint8_t *buffer,
-            transfer_cb_fn cb)
+        uint8_t bRequest,
+        uint16_t wValue,
+        uint16_t wIndex,
+        uint16_t wLength,
+        uint8_t *buffer,
+        transfer_cb_fn cb)
     {
         xfer t;
-        
+
         t.buf = std::unique_ptr<uint8_t[]>( new uint8_t[sizeof(struct libusb_control_setup) + wLength] );
         if ( ! t.buf )
             return false;
@@ -397,12 +397,12 @@ namespace usbpp
         if ( buffer )
         {
             ::memcpy(t.buf.get() + sizeof(struct libusb_control_setup),
-                    buffer,
-                    wLength);
+                buffer,
+                wLength);
         }
 
         libusb_fill_control_transfer(t.xfer.get(), m_handle.get(), t.buf.get(),
-                handle_libusb_transfer_cb_fn, this , 1000);
+            handle_libusb_transfer_cb_fn, this , 1000);
 
         hexdump(t.buf.get(), wLength + sizeof(struct libusb_control_setup));
 
@@ -420,8 +420,8 @@ namespace usbpp
     void handle::on_libusb_transfer_cb( struct libusb_transfer *completed )
     {
         for ( auto it = m_transfers.begin();
-                it != m_transfers.end();
-                ++it )
+            it != m_transfers.end();
+            ++it )
         {
             if ( it->xfer.get() == completed )
             {

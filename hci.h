@@ -134,7 +134,7 @@ namespace hci
             {
                 auto &cmd = m_command_queue.front();
                 send( cmd.get() );
-//                m_command_ongoing = true;
+                //                m_command_ongoing = true;
             }
         }
         virtual bool reset(completed_cb);

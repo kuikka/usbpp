@@ -66,7 +66,7 @@ namespace hci
     ///////////////////////////////////////////////////////////////////
     usb_controller::usb_controller( usbpp::device& device )
         : m_dev( device )
-        , m_event_buffer( new uint8_t[ 512 ] )
+          , m_event_buffer( new uint8_t[ 512 ] )
     {
     }
 
@@ -119,9 +119,9 @@ namespace hci
             m_event_buffer.get(),
             512,
             std::bind(&usb_controller::on_event, this,
-            std::placeholders::_1,
-            std::placeholders::_2,
-            std::placeholders::_3) );
+                std::placeholders::_1,
+                std::placeholders::_2,
+                std::placeholders::_3) );
         if ( !success )
             cout << "submit_event_transfer failed\n";
         return success;
@@ -150,7 +150,7 @@ namespace hci
     bool usb_controller::send(hci::command *cmd)
     {
         cout << "Sending " << cmd->buffer().length() << " bytes\n";
-//        hexdump(cmd->buffer().ptr(), cmd->buffer().length());
+        //        hexdump(cmd->buffer().ptr(), cmd->buffer().length());
         return m_handle->control_transfer(
             LIBUSB_RECIPIENT_DEVICE | LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_ENDPOINT_OUT,
             0, 0, 0,
