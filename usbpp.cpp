@@ -1,11 +1,11 @@
 #include <unistd.h>
 #include <iostream>
-#include "libusbpp.h"
-#include "hci.h"
+#include "usb/libusbpp.h"
+#include "bt/hci.h"
 
 using std::cout;
 
-void callback( usbpp::device device, bool arrived )
+void callback( usbpp::usb_device device, bool arrived )
 {
     cout << "USB device " << device << (arrived ? " added" : " removed") << std::endl;
     cout << "  Class " << std::hex << device.dev_class() << "\n";
@@ -33,15 +33,15 @@ void callback( usbpp::device device, bool arrived )
 
 int main(int /* argc */, char** /* *argv[] */)
 {
-    events::base b;
-    usbpp::context c;
+    events::event_base b;
+    usbpp::usb_context c;
 
     b.init();
 
     hci::usb_controller_factory factory( c );
 
-    c.set_hotplug_handler(&callback);
-    c.init(&b, 0x0b05, 0x17cb );
+//    c.set_hotplug_handler(&callback);
+    c.init(&b, 0x0a12, 0x0001 );
 
 #if 0
     auto devices = c.devices();

@@ -1,21 +1,8 @@
 #include <iostream>
 #include "hci.h"
+#include "hexdump.h"
 
 using std::cout;
-
-static void hexdump(const void *ptr, size_t len)
-{
-    uint8_t *p = (uint8_t*) ptr;
-    for (size_t i = 0; i < len; i++)
-    {
-        printf("%02x ", p[i]);
-        if (i && i % 16 == 0)
-        {
-            printf("\n");
-        }
-        printf("\n");
-    }
-}
 
 namespace hci
 {
@@ -64,7 +51,7 @@ namespace hci
     ///////////////////////////////////////////////////////////////////
     //// hci::usb_controller
     ///////////////////////////////////////////////////////////////////
-    usb_controller::usb_controller( usbpp::device& device )
+    usb_controller::usb_controller( usbpp::usb_device& device )
         : m_dev( device )
           , m_event_buffer( new uint8_t[ 512 ] )
     {
@@ -101,10 +88,8 @@ namespace hci
                 {
                     cout << "Got it\n";
                     m_handle = m_dev.open();
+                    m_handle->claim_interface(intf.number());
                     submit_event_transfer();
-                    this->reset( cb );
-                    this->reset( cb );
-                    this->reset( cb );
                     this->reset( cb );
                     return true;
                 }
@@ -117,7 +102,7 @@ namespace hci
     {
         bool success = m_handle->transfer(m_event_in,
             m_event_buffer.get(),
-            512,
+            64,
             std::bind(&usb_controller::on_event, this,
                 std::placeholders::_1,
                 std::placeholders::_2,
@@ -127,21 +112,21 @@ namespace hci
         return success;
     }
 
-    void usb_controller::on_event(libusb_transfer_status,
+    void usb_controller::on_event(usbpp::usb_transfer_status status,
         const uint8_t *buffer, size_t length)
     {
-        cout << "Got USB Event";
+        cout << "Got USB Event status=" << (int) status << " buffer=" << buffer << " length=" << length << "\n";
         submit_event_transfer();
     }
 
 
-    usb_controller_factory::usb_controller_factory( usbpp::context &ctx )
+    usb_controller_factory::usb_controller_factory( usbpp::usb_context &ctx )
         : controller_factory()
           ,  m_ctx(ctx)
           , m_manager( manager::get() )
     {
         m_ctx.set_hotplug_handler(
-            [this] (usbpp::device device, bool added)
+            [this] (usbpp::usb_device device, bool added)
             {
                 this->hotplug_cb_fn( device, added );
             });
@@ -156,19 +141,19 @@ namespace hci
             0, 0, 0,
             cmd->buffer().length(),
             cmd->buffer().ptr(),
-            [](libusb_transfer_status status, const uint8_t *buf, size_t len) {
-                std::cout << "Usb transfer done, status=" << status << "\n";
+            [](usbpp::usb_transfer_status status, const uint8_t *buf, size_t len) {
+                std::cout << "Usb transfer done, status=" << (int) status << "\n";
             });  
     }
 
-    void usb_controller_factory::hotplug_cb_fn( usbpp::device device, bool added )
+    void usb_controller_factory::hotplug_cb_fn( usbpp::usb_device device, bool added )
     {
         std::cout << "FACTORY: USB device " << device << (added ? " added" : " removed") << std::endl;
         if ( added )
             probe( device );
     }
 
-    void usb_controller_factory::probe( usbpp::device& device )
+    void usb_controller_factory::probe( usbpp::usb_device& device )
     {
         if ( ( device.dev_class() == 0xE0
                 && device.subclass() == 0x01

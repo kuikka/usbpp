@@ -2,67 +2,11 @@
 
 #include <vector>
 #include <list>
-#include "libusbpp.h"
+#include "usb/libusbpp.h"
+#include "bytebuffer.h"
 
 using std::unique_ptr;
 using std::shared_ptr;
-
-class bytebuffer
-{
-public:
-    inline bytebuffer& put( uint8_t byte ) {
-        m_buf.push_back( byte );
-        return *this;
-    };
-
-    inline bytebuffer& put( uint16_t word ) {
-        put( static_cast<uint8_t>( word & 0xff ) );
-        put( static_cast<uint8_t>( word >> 8 ) );
-        return *this;
-    };
-
-    inline bytebuffer& put( uint32_t dword ) {
-        put( static_cast<uint16_t>( dword & 0xffff ) );
-        put( static_cast<uint16_t>( dword >> 16 ) );
-        return *this;
-    };
-
-    inline bytebuffer& put( uint64_t qword ) {
-        put( static_cast<uint32_t>( qword & 0xffffffff ) );
-        put( static_cast<uint32_t>( qword >> 32 ) );
-        return *this;
-    };
-
-    inline uint8_t get_byte() {
-        if ( m_read_index + sizeof(uint8_t) > m_buf.size() )
-            return 0;
-        return m_buf[m_read_index++];
-    }
-
-    inline uint16_t get_word() {
-        if ( m_read_index + sizeof(uint16_t) > m_buf.size() )
-            return 0;
-
-        uint16_t val = m_buf[m_read_index++];
-        val |= m_buf[m_read_index++] << 8;
-        return val;
-    }
-
-    inline size_t length()
-    {
-        return m_buf.size();
-    }
-
-    inline uint8_t * ptr()
-    {
-        return m_buf.data();
-    }
-
-private:
-    using data_type = std::vector<uint8_t>;
-    data_type                m_buf;
-    data_type::size_type     m_read_index = 0;
-};
 
 
 namespace hci
@@ -150,23 +94,23 @@ namespace hci
     class usb_controller : public controller
     {
     public:
-        usb_controller( usbpp::device& device );
+        usb_controller( usbpp::usb_device& device );
         virtual bool init(controller::completed_cb) override;
         virtual bool send(hci::command *cmd) override;
 
     private:
         bool submit_event_transfer();
-        void on_event(libusb_transfer_status,
+        void on_event(usbpp::usb_transfer_status,
             const uint8_t*, size_t);
 
 
     private:
-        usbpp::device                   m_dev;
-        unique_ptr<usbpp::handle>       m_handle;
-        usbpp::endpoint                 m_event_in;
-        usbpp::endpoint                 m_data_out;
-        usbpp::endpoint                 m_data_in;
-        std::unique_ptr<uint8_t[]>      m_event_buffer;
+        usbpp::usb_device                     m_dev;
+        unique_ptr<usbpp::usb_device_handle>  m_handle;
+        usbpp::usb_endpoint                   m_event_in;
+        usbpp::usb_endpoint                   m_data_out;
+        usbpp::usb_endpoint                   m_data_in;
+        std::unique_ptr<uint8_t[]>            m_event_buffer;
     };
 
     class controller_factory
@@ -195,13 +139,13 @@ namespace hci
     class usb_controller_factory : public controller_factory
     {
     public:
-        usb_controller_factory( usbpp::context &ctx );
-        void hotplug_cb_fn( usbpp::device device, bool added );
-        void probe( usbpp::device& device );
+        usb_controller_factory( usbpp::usb_context &ctx );
+        void hotplug_cb_fn( usbpp::usb_device device, bool added );
+        void probe( usbpp::usb_device& device );
 
     private:
-        usbpp::context  &m_ctx;
-        hci::manager    &m_manager;
+        usbpp::usb_context  &m_ctx;
+        hci::manager        &m_manager;
     };
 
 }
