@@ -41,7 +41,8 @@ int main(int /* argc */, char** /* *argv[] */)
     hci::usb_controller_factory factory( c );
 
 //    c.set_hotplug_handler(&callback);
-    c.init(&b, 0x0a12, 0x0001 );
+    c.init( &b );
+    //c.init(&b, 0x0a12, 0x0001 );
 
 #if 0
     auto devices = c.devices();

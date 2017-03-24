@@ -28,7 +28,7 @@ namespace usbpp
     static int hotplug_callback_fn(libusb_context* /* ctx */, libusb_device *device,
         libusb_hotplug_event event, void *user_data)
     {
-        printf("hotplug_callback_fn() event=%x\n", event);
+        printf("\nhotplug_callback_fn() event=%x\n", event);
         usb_context *c = static_cast<usb_context*>( user_data );
         c->on_hotplug( device, event );
 

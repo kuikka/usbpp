@@ -6,6 +6,19 @@
 class bytebuffer
 {
 public:
+    bytebuffer()
+    {};
+
+    bytebuffer( const uint8_t *data, size_t length )
+      :   m_buf( data, data + length )
+    {
+    };
+
+    void set( const uint8_t *data, size_t length )
+    {
+        m_buf = data_type( data, data + length );
+    };
+
     inline bytebuffer& put( uint8_t byte ) {
         m_buf.push_back( byte );
         return *this;
@@ -44,7 +57,7 @@ public:
         return val;
     }
 
-    inline size_t length()
+    inline size_t length() const
     {
         return m_buf.size();
     }
@@ -59,3 +72,5 @@ private:
     data_type                m_buf;
     data_type::size_type     m_read_index = 0;
 };
+
+// vim: set shiftwidth=4 expandtab cinoptions=t0,g0,j1,ws,(s,W1:

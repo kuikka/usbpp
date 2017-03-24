@@ -32,23 +32,6 @@ namespace hci
     }
 
     ///////////////////////////////////////////////////////////////////
-    //// hci::controller
-    ///////////////////////////////////////////////////////////////////
-    bool controller::reset( controller::completed_cb cb )
-    {
-        submit_command( command::reset(),
-            [=] (const hci_command &cmd)
-            {
-                if (cmd->status() == 0x00) {
-                    cb( true );
-                } else {
-                    cb( false );
-                }
-            } );
-        return true;
-    }
-
-    ///////////////////////////////////////////////////////////////////
     //// hci::usb_controller
     ///////////////////////////////////////////////////////////////////
     usb_controller::usb_controller( usbpp::usb_device& device )
@@ -88,8 +71,10 @@ namespace hci
                 {
                     cout << "Got it\n";
                     m_handle = m_dev.open();
+                    cout << "Opened\n";
                     m_handle->claim_interface(intf.number());
-                    submit_event_transfer();
+                    cout << "Claimed\n";
+                    this->submit_event_transfer();
                     this->reset( cb );
                     return true;
                 }
@@ -103,7 +88,7 @@ namespace hci
         bool success = m_handle->transfer(m_event_in,
             m_event_buffer.get(),
             64,
-            std::bind(&usb_controller::on_event, this,
+            std::bind(&usb_controller::on_event_transfer_completed, this,
                 std::placeholders::_1,
                 std::placeholders::_2,
                 std::placeholders::_3) );
@@ -112,10 +97,12 @@ namespace hci
         return success;
     }
 
-    void usb_controller::on_event(usbpp::usb_transfer_status status,
+    void usb_controller::on_event_transfer_completed(usbpp::usb_transfer_status status,
         const uint8_t *buffer, size_t length)
     {
         cout << "Got USB Event status=" << (int) status << " buffer=" << buffer << " length=" << length << "\n";
+        hci::event e( buffer, length );
+        on_hci_event( e );
         submit_event_transfer();
     }
 
