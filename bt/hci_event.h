@@ -10,12 +10,16 @@ namespace hci
     class event
     {
     public:
+        static const uint8_t COMMAND_COMPLETED = 0x0E;
+        static const uint8_t COMMAND_STATUS    = 0x0F;
+    public:
         event();
         ~event();
         event( const uint8_t *buffer, size_t length );
 
         int code() const { return m_event_code; };
         int length() const { return m_event_length; };
+        const bytebuffer& data() const { return m_data; };
 
         bool parse( const uint8_t *buffer, size_t length );
 
@@ -26,3 +30,5 @@ namespace hci
     };
 
 };
+
+// vim: set shiftwidth=4 expandtab cinoptions=t0,g0,j1,ws,(s,W1:

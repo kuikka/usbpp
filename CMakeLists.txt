@@ -25,6 +25,7 @@ link_directories(${LIBUSB_LIBRARY_DIRS})
 add_executable(usbpptest
                usbpp.cpp
                bt/hci.cpp
+               bt/hci_command.cpp
                bt/hci_controller.cpp
                bt/hci_event.cpp
                )

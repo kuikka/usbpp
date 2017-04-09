@@ -42,13 +42,13 @@ public:
         return *this;
     };
 
-    inline uint8_t get_byte() {
+    inline uint8_t get_byte() const {
         if ( m_read_index + sizeof(uint8_t) > m_buf.size() )
             return 0;
         return m_buf[m_read_index++];
     }
 
-    inline uint16_t get_word() {
+    inline uint16_t get_word() const {
         if ( m_read_index + sizeof(uint16_t) > m_buf.size() )
             return 0;
 
@@ -70,7 +70,7 @@ public:
 private:
     using data_type = std::vector<uint8_t>;
     data_type                m_buf;
-    data_type::size_type     m_read_index = 0;
+    mutable data_type::size_type     m_read_index = 0;
 };
 
 // vim: set shiftwidth=4 expandtab cinoptions=t0,g0,j1,ws,(s,W1:

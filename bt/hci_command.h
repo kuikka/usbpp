@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <functional>
+#include "bytebuffer.h"
+
 using std::unique_ptr;
 using std::shared_ptr;
 
@@ -8,7 +12,7 @@ namespace hci
     class command;
 
     using hci_command = unique_ptr<command>;
-    using hci_command_completion_cb_t = std::function<void(const hci_command&)>;
+    using hci_command_completion_cb_t = std::function<void(const hci::command&)>;
 
     class command
     {
@@ -21,6 +25,7 @@ namespace hci
 
         uint8_t status() const { return m_status; }
         void set_completion_cb(hci_command_completion_cb_t cb) { m_cb = cb; }
+        void complete();
         bytebuffer& buffer() { return m_cmd; };
 
     public:
@@ -37,3 +42,5 @@ namespace hci
     };
 
 };
+
+// vim: set shiftwidth=4 expandtab cinoptions=t0,g0,j1,ws,(s,W1:

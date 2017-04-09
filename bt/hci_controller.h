@@ -30,12 +30,15 @@ namespace hci
         virtual void submit_command(hci_command cmd);
         virtual void send_next_command();
         virtual bool reset(completed_cb);
+        virtual void complete_command();
+
         virtual bool init(completed_cb) = 0;
         virtual bool send(hci::command *cmd) = 0;
 
     protected:
         event_cb_t                 m_event_callback;
         std::list<hci_command>     m_command_queue;
+	hci_command                m_current_command;
         bool                       m_command_ongoing = false;
     };
 
@@ -62,3 +65,5 @@ namespace hci
     };
 
 };
+
+// vim: set shiftwidth=4 expandtab cinoptions=t0,g0,j1,ws,(s,W1:
