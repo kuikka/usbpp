@@ -23,14 +23,20 @@ namespace hci
             m_cmd.put( (uint8_t) 0 ); // data length
         };
 
-        uint8_t status() const { return m_status; }
+        int status() const { return m_status; }
+        void set_status(int status) { m_status = status; }
         void set_completion_cb(hci_command_completion_cb_t cb) { m_cb = cb; }
         void complete();
+        void set_length(int length) { m_cmd.ptr()[2] = length; };
         bytebuffer& buffer() { return m_cmd; };
 
     public:
         static hci_command reset();
+        static hci_command set_event_mask( uint64_t le_event_mask );
         static hci_command le_set_event_mask( uint64_t le_event_mask );
+        static hci_command le_set_scan_parameters( bool active, uint16_t interval, uint16_t window,
+            bool own_addr_random = false, bool whitelist_only = false );
+        static hci_command le_set_scan_enable( bool enable, bool filter_duplicates );
 
     protected:
 

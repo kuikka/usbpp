@@ -18,7 +18,7 @@ namespace hci
     {
     public:
         using completed_status = bool;
-        using completed_cb = std::function<void(completed_status)>;
+        using operation_completed_cb = std::function<void(completed_status)>;
 
     public:
         virtual void on_hci_event( const event &ev );
@@ -26,27 +26,32 @@ namespace hci
 
     public:
         virtual void set_event_callback(event_cb_t cb);
+        virtual bool reset(operation_completed_cb);
+        virtual bool init(operation_completed_cb) = 0;
+        virtual bool send(hci::command *cmd) = 0;
         virtual void submit_command( hci_command cmd, hci_command_completion_cb_t cb );
         virtual void submit_command(hci_command cmd);
-        virtual void send_next_command();
-        virtual bool reset(completed_cb);
-        virtual void complete_command();
+        const std::string& name() { return m_name; }
 
-        virtual bool init(completed_cb) = 0;
-        virtual bool send(hci::command *cmd) = 0;
+    protected:
+        virtual void send_next_command();
+        virtual void complete_command();
 
     protected:
         event_cb_t                 m_event_callback;
         std::list<hci_command>     m_command_queue;
 	hci_command                m_current_command;
         bool                       m_command_ongoing = false;
+        std::string                m_name;
     };
 
     class usb_controller : public controller
     {
     public:
         usb_controller( usbpp::usb_device& device );
-        virtual bool init(controller::completed_cb) override;
+
+    public:
+        virtual bool init(controller::operation_completed_cb) override;
         virtual bool send(hci::command *cmd) override;
 
     private:

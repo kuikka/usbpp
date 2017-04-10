@@ -45,7 +45,7 @@ namespace usbpp
          * If buffer is nullptr, buffer management will be taken care of.
          * If a buffer is passed it must be available until the callback */
         bool transfer(const usbpp::usb_endpoint &ep,
-            const uint8_t *buffer,
+            uint8_t *buffer,
             size_t length,
             transfer_cb_fn);
 

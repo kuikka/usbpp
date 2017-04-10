@@ -12,6 +12,7 @@ namespace hci
     public:
         static const uint8_t COMMAND_COMPLETED = 0x0E;
         static const uint8_t COMMAND_STATUS    = 0x0F;
+        static const uint8_t LE_META_EVENT     = 0x3E;
     public:
         event();
         ~event();

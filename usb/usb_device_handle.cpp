@@ -31,7 +31,7 @@ namespace usbpp
     }
 
     bool usb_device_handle::transfer(const usbpp::usb_endpoint &ep,
-        const uint8_t *buffer,
+        uint8_t *buffer,
         size_t length,
         // TODO: Copy data in write? Or claim buffer?
         transfer_cb_fn cb)
@@ -42,6 +42,7 @@ namespace usbpp
             return false;
 
         xfer t;
+        // allocate buffer if none provided, else use the provided buffre
         if ( buffer == nullptr )
         {
             t.buf = std::unique_ptr<uint8_t[]>( new uint8_t[length] );
@@ -63,12 +64,11 @@ namespace usbpp
             t.xfer.get(),
             m_handle.get(),
             ep.ep(),
-            t.buf.get(),
+            buffer,
             length,
             handle_libusb_transfer_cb_fn,
             this,
-            1000
-            );
+            0);
 
         std::cout << "type=" << (int) t.xfer.get()->type << "\n";
 
@@ -87,12 +87,16 @@ namespace usbpp
     bool usb_device_handle::claim_interface(int bInterfaceNumber)
     {
         int err = libusb_detach_kernel_driver(m_handle.get(), bInterfaceNumber);
-        if (err)
+        if (err) {
             std::cout << "libusb_detach_kernel_driver failed: " << err << "\n";
+//            return false;
+        }
 
         err = libusb_claim_interface(m_handle.get(), bInterfaceNumber);
-        if (err)
+        if (err) {
             std::cout << "libusb_claim_interface failed: " << err << "\n";
+  //          return false;
+        }
         return err == 0;
     }
 
@@ -155,7 +159,7 @@ namespace usbpp
                 usbpp::usb_transfer_status status = usb_transfer_status::OK;
                 if ( completed->status != LIBUSB_TRANSFER_COMPLETED )
                     status = usb_transfer_status::FAIL;
-                t.cb( status, completed->buffer, completed->length );
+                t.cb( status, completed->buffer, completed->actual_length );
                 return;
             }
         }

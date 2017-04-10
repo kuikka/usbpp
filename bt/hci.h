@@ -13,9 +13,8 @@ using std::shared_ptr;
 
 namespace hci
 {
-    class controller_factory
-    {
-    };
+    class controller_factory;
+    class controller;
 
     class manager
     {
@@ -29,23 +28,27 @@ namespace hci
         bool add( shared_ptr<hci::controller> c )
         {
             m_controllers.push_back( c );
+            if ( m_controller_added_cb )
+                m_controller_added_cb( *c );
+
             return true;
         }
 
+        void add( hci::controller_factory * factory )
+        {
+            m_factories.push_back( factory );
+        }
+
+        void set_controller_added_cb( std::function< void(hci::controller&) > cb )
+        {
+            m_controller_added_cb = cb;
+        };
+
     private:
+        manager() {};
         std::vector< shared_ptr<hci::controller> > m_controllers;
-    };
-
-    class usb_controller_factory : public controller_factory
-    {
-    public:
-        usb_controller_factory( usbpp::usb_context &ctx );
-        void hotplug_cb_fn( usbpp::usb_device device, bool added );
-        void probe( usbpp::usb_device& device );
-
-    private:
-        usbpp::usb_context  &m_ctx;
-        hci::manager        &m_manager;
+        std::vector< hci::controller_factory* >    m_factories;
+        std::function< void(hci::controller&) >    m_controller_added_cb;
     };
 
 }
